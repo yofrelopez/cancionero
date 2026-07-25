@@ -122,7 +122,7 @@ export default function LibraryPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredSongs.map((song) => {
+            {filteredSongs?.map((song) => {
               const cardContent = (
                 <>
                   <div className="flex-1 min-w-0 pr-4">
