@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, use, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { useWakeLock } from "@/lib/wakelock";
-import { ArrowLeft, Play, Square, Plus, Minus, ChevronRight, ChevronLeft } from "lucide-react";
+import { ArrowLeft, Play, Square, Plus, Minus, SkipBack, SkipForward } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
@@ -54,7 +54,12 @@ function GigModeContent() {
 
         if (scrollAccumulator.current >= 1) {
           const pixels = Math.floor(scrollAccumulator.current);
-          window.scrollBy(0, pixels);
+          const scrollContainer = document.querySelector('main');
+          if (scrollContainer) {
+            scrollContainer.scrollBy(0, pixels);
+          } else {
+            window.scrollBy(0, pixels);
+          }
           scrollAccumulator.current -= pixels;
         }
         
@@ -95,6 +100,8 @@ function GigModeContent() {
   const prevSongId = currentIndex > 0 ? setlist?.songs[currentIndex - 1] : null;
   const nextSongId = currentIndex !== -1 && currentIndex < (setlist?.songs.length ?? 0) - 1 ? setlist?.songs[currentIndex + 1] : null;
 
+  // We don't need navigateTo anymore since we'll use <Link>
+  
   if (song === undefined) return <div className="h-screen bg-black flex items-center justify-center text-zinc-500">Cargando modo show...</div>;
   if (song === null) return <div className="h-screen bg-black flex items-center justify-center text-red-500">Canción no encontrada</div>;
 
@@ -103,28 +110,6 @@ function GigModeContent() {
       className="min-h-screen bg-black text-amber-500 selection:bg-amber-500/20 pb-[50vh]"
       onClick={handleScreenTap}
     >
-      {/* Invisible navigation areas (left/right) if in setlist mode */}
-      {setlist && (
-        <>
-          {prevSongId && (
-            <div 
-              className="fixed left-0 top-[20%] bottom-[20%] w-[15vw] z-10 flex items-center justify-start opacity-0 hover:opacity-10 active:opacity-100 transition-opacity bg-gradient-to-r from-zinc-900/40 to-transparent cursor-pointer"
-              onClick={(e) => { e.stopPropagation(); router.push(`/gig?id=${prevSongId}&setlist=${setlistIdParam}`); }}
-            >
-              <ChevronLeft className="w-16 h-16 text-zinc-300 ml-2" />
-            </div>
-          )}
-          {nextSongId && (
-            <div 
-              className="fixed right-0 top-[20%] bottom-[20%] w-[15vw] z-10 flex items-center justify-end opacity-0 hover:opacity-10 active:opacity-100 transition-opacity bg-gradient-to-l from-zinc-900/40 to-transparent cursor-pointer"
-              onClick={(e) => { e.stopPropagation(); router.push(`/gig?id=${nextSongId}&setlist=${setlistIdParam}`); }}
-            >
-              <ChevronRight className="w-16 h-16 text-zinc-300 mr-2" />
-            </div>
-          )}
-        </>
-      )}
-
       {/* Main Content Area */}
       <div className="max-w-5xl mx-auto px-6 pt-24">
         <div className="text-center pt-8 pb-10 border-b border-white/5 mb-8">
@@ -193,25 +178,20 @@ function GigModeContent() {
       </div>
 
       {/* FIXED CONTROLS OVERLAY */}
-      {/* 
-        El contenedor de los controles es z-50.
-        Si showControls es false, lo ocultamos visualmente (opacity-0 y pointer-events-none),
-        EXCEPTO el botón central de Play/Pause que mantenemos fantasma.
-      */}
       
       {/* Top Bar (Only visible when controls are shown) */}
       <div className={clsx(
         "controls-overlay fixed top-0 left-0 right-0 p-4 bg-gradient-to-b from-black via-black/80 to-transparent transition-opacity duration-300 z-50 pointer-events-auto flex items-center justify-between",
         showControls ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
-        <button 
-          onClick={() => router.back()}
-          className="w-12 h-12 flex items-center justify-center bg-zinc-900/80 backdrop-blur-md rounded-full border border-white/10 text-white active:scale-95 transition-all"
+        <Link 
+          href={setlistIdParam ? `/setlists/detail?id=${setlistIdParam}` : "/library"}
+          className="w-12 h-12 flex items-center justify-center bg-zinc-900/80 backdrop-blur-md rounded-full border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all"
         >
           <ArrowLeft className="w-6 h-6" />
-        </button>
+        </Link>
         
-        <div className="flex bg-zinc-900/80 backdrop-blur-md rounded-full border border-white/10 p-1">
+        <div className="flex bg-zinc-900/80 backdrop-blur-md rounded-full border border-white/10 p-1 shadow-lg">
           <button 
             onClick={() => setFontSize(f => Math.max(16, f - 2))}
             className="w-12 h-12 flex items-center justify-center text-white hover:bg-white/10 rounded-full active:scale-95 transition-all"
@@ -231,10 +211,9 @@ function GigModeContent() {
       </div>
 
       {/* Bottom Control Bar */}
-      {/* El botón Play SIEMPRE es clickable, incluso como fantasma */}
       <div className="controls-overlay fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-4 w-full max-w-sm px-4">
         
-        {/* Speed Slider Panel (Hides when playing/controls hidden) */}
+        {/* Speed Slider Panel */}
         <div className={clsx(
           "w-full bg-zinc-900/95 backdrop-blur-xl border border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 transform",
           showControls ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"
@@ -254,25 +233,76 @@ function GigModeContent() {
           />
         </div>
 
-        {/* Master Play/Stop Button (Ghost mode when controls hidden) */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent triggering background tap
-            const willPlay = !isScrolling;
-            setIsScrolling(willPlay);
-            if (willPlay) setShowControls(false); // Auto-hide controls on play
-          }}
-          className={clsx(
-            "w-20 h-20 flex items-center justify-center rounded-full transition-all duration-300 active:scale-95",
-            isScrolling 
-              ? showControls 
-                ? "bg-red-500/20 text-red-500 border border-red-500/30 backdrop-blur-md" // Stop state (visible)
-                : "bg-black/20 text-white/20 border border-white/5 backdrop-blur-sm shadow-none" // Stop state (GHOST)
-              : "bg-amber-500 text-black shadow-[0_4px_30px_rgba(245,158,11,0.4)]" // Play state
+        {/* Master Transport Controls */}
+        <div className="flex items-center justify-center gap-6">
+          {/* Previous Button */}
+          {setlist && (
+            prevSongId ? (
+              <Link
+                href={`/gig?id=${prevSongId}&setlist=${setlistIdParam}`}
+                replace
+                className={clsx(
+                  "w-14 h-14 flex items-center justify-center rounded-full bg-zinc-900/90 backdrop-blur-md border border-white/5 transition-all duration-300",
+                  showControls ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none",
+                  "text-white hover:bg-zinc-800 active:scale-95 shadow-lg"
+                )}
+              >
+                <SkipBack className="w-6 h-6 fill-current" />
+              </Link>
+            ) : (
+              <div className={clsx(
+                "w-14 h-14 flex items-center justify-center rounded-full bg-zinc-900/90 backdrop-blur-md border border-white/5 transition-all duration-300 text-zinc-700 cursor-not-allowed",
+                showControls ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8 pointer-events-none"
+              )}>
+                <SkipBack className="w-6 h-6 fill-current" />
+              </div>
+            )
           )}
-        >
-          {isScrolling ? <Square className="w-8 h-8 fill-current" /> : <Play className="w-10 h-10 ml-2 fill-current" />}
-        </button>
+
+          {/* Master Play/Stop Button (Ghost mode when controls hidden) */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation(); 
+              const willPlay = !isScrolling;
+              setIsScrolling(willPlay);
+              if (willPlay) setShowControls(false);
+            }}
+            className={clsx(
+              "w-20 h-20 flex items-center justify-center rounded-full transition-all duration-300 active:scale-95 flex-shrink-0 z-10",
+              isScrolling 
+                ? showControls 
+                  ? "bg-red-500/20 text-red-500 border border-red-500/30 backdrop-blur-md" 
+                  : "bg-black/20 text-white/20 border border-white/5 backdrop-blur-sm shadow-none" 
+                : "bg-amber-500 text-black shadow-[0_4px_30px_rgba(245,158,11,0.4)]" 
+            )}
+          >
+            {isScrolling ? <Square className="w-8 h-8 fill-current" /> : <Play className="w-10 h-10 ml-2 fill-current" />}
+          </button>
+
+          {/* Next Button */}
+          {setlist && (
+            nextSongId ? (
+              <Link
+                href={`/gig?id=${nextSongId}&setlist=${setlistIdParam}`}
+                replace
+                className={clsx(
+                  "w-14 h-14 flex items-center justify-center rounded-full bg-zinc-900/90 backdrop-blur-md border border-white/5 transition-all duration-300",
+                  showControls ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8 pointer-events-none",
+                  "text-white hover:bg-zinc-800 active:scale-95 shadow-lg"
+                )}
+              >
+                <SkipForward className="w-6 h-6 fill-current" />
+              </Link>
+            ) : (
+              <div className={clsx(
+                "w-14 h-14 flex items-center justify-center rounded-full bg-zinc-900/90 backdrop-blur-md border border-white/5 transition-all duration-300 text-zinc-700 cursor-not-allowed",
+                showControls ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-8 pointer-events-none"
+              )}>
+                <SkipForward className="w-6 h-6 fill-current" />
+              </div>
+            )
+          )}
+        </div>
 
       </div>
 

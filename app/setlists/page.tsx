@@ -12,9 +12,9 @@ export default function SetlistsPage() {
   const setlists = useLiveQuery(() => db.setlists.orderBy("createdAt").reverse().toArray());
 
   return (
-    <div className="flex flex-col min-h-full space-y-6 pb-24">
+    <div className="flex flex-col min-h-full space-y-6 pb-24 px-4 sm:px-6">
       {/* Premium Header */}
-      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-2xl pt-5 pb-4 border-b border-white/5 shadow-sm">
+      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-2xl pt-5 pb-4 border-b border-white/5 shadow-sm -mx-4 px-4 sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-semibold tracking-wide text-zinc-200">Mis Setlists</h1>
           <button 
@@ -28,7 +28,7 @@ export default function SetlistsPage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 animate-in fade-in duration-500">
+      <div className="flex-1 animate-in fade-in duration-500 pt-2">
         {!setlists ? (
           <div className="flex items-center justify-center h-64 text-zinc-600 font-medium animate-pulse">
             Cargando setlists...
