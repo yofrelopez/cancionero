@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useRef } from "react";
+import { useState, useEffect, use, useRef, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { useWakeLock } from "@/lib/wakelock";
@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 
-export default function GigModePage() {
+function GigModeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setlistIdParam = searchParams.get("setlist");
@@ -277,5 +277,13 @@ export default function GigModePage() {
       </div>
 
     </div>
+  );
+}
+
+export default function GigModePage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-zinc-500 font-medium">Preparando escenario...</div>}>
+      <GigModeContent />
+    </Suspense>
   );
 }

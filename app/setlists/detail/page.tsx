@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, Suspense } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { ArrowLeft, Play, Plus, Trash2, GripVertical } from "lucide-react";
@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 
-export default function SetlistDetailPage() {
+function SetlistDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const idParam = searchParams.get("id");
@@ -182,5 +182,13 @@ export default function SetlistDetailPage() {
       </div>
       
     </div>
+  );
+}
+
+export default function SetlistDetailPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center text-zinc-500 font-medium">Cargando repertorio...</div>}>
+      <SetlistDetailContent />
+    </Suspense>
   );
 }
